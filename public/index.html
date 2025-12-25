@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Asset Screen</title>
+
+<style>
+:root {
+  --bg: #0f1115;
+  --panel: #161a21;
+  --text-primary: #e6e8eb;
+  --text-secondary: #9aa1ac;
+  --border: #232834;
+
+  --green-soft: #4caf50;
+  --green-strong: #7ddc89;
+  --amber: #f5b942;
+  --neutral: #9aa1ac;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 32px;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: 28px;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  margin-bottom: 32px;
+}
+
+.section {
+  margin-bottom: 48px;
+}
+
+.section-title {
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.section-desc {
+  color: var(--text-secondary);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.asset {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  display: grid;
+  grid-template-columns: 1.2fr 1.6fr 0.6fr;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.asset-name {
+  font-size: 16px;
+}
+
+.badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.context {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.upside {
+  text-align: right;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.upside.neutral {
+  color: var(--neutral);
+}
+
+.upside.small {
+  color: var(--green-soft);
+}
+
+.upside.medium {
+  color: var(--green-strong);
+}
+
+.upside.large {
+  color: var(--amber);
+}
+
+.meta {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  margin-top: 2px;
+  text-align: right;
+}
+.meta-tag {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Asset Screen</h1>
+<div class="subtitle">
+Long-term reference view based on historical ATH
+</div>
+
+<div class="section" id="index-section">
+  <div class="section-title">Index-like Assets</div>
+  <div class="section-desc">
+    Broad market instruments with structural growth bias
+  </div>
+</div>
+
+<div class="section" id="spec-section">
+  <div class="section-title">Speculative & Volatile Assets</div>
+  <div class="section-desc">
+    Assets with regime dependency and higher uncertainty
+  </div>
+</div>
+
+<script>
+fetch("/api/portfolio")
+  .then(res => res.json())
+  .then(data => {
+    data.forEach(asset => {
+      renderAsset(asset);
+    });
+  });
+
+function renderAsset(asset) {
+  const section =
+    asset.type === "index"
+      ? document.getElementById("index-section")
+      : document.getElementById("spec-section");
+
+  const upsideClass = getUpsideClass(asset.upside);
+
+  const el = document.createElement("div");
+  el.className = "asset";
+
+  el.innerHTML = `
+    <div>
+      <div class="asset-name">${asset.name}</div>
+      <div class="badge">${capitalize(asset.type)}</div>
+    </div>
+
+    <div class="context">
+      Current: ${round(asset.current)}<br/>
+      ATH: ${round(asset.ath)}<br/>
+      Target: ${round(asset.target)}
+      ${edgeNote(asset)}
+    </div>
+
+    <div>
+      <div class="upside ${upsideClass}">
+        ${formatUpside(asset)}
+      </div>
+      <div class="meta">Upside to target</div>
+    </div>
+  `;
+
+  section.appendChild(el);
+}
+
+function round(val) {
+  return Math.round(val);
+}
+
+function formatUpside(asset) {
+  if (asset.current > asset.ath) return "—";
+  return asset.upside.toFixed(1) + "%";
+}
+
+function getUpsideClass(upside) {
+  if (upside <= 0) return "neutral";
+  if (upside < 10) return "small";
+  if (upside < 30) return "medium";
+  return "large";
+}
+
+function edgeNote(asset) {
+  if (asset.current > asset.ath) {
+    return `<div class="meta-tag">Price discovery</div>`;
+  }
+  if (asset.upside < 3) {
+    return `<div class="meta-tag">Near ATH</div>`;
+  }
+  if (asset.upside > 40) {
+    return `<div class="meta-tag">High regime uncertainty</div>`;
+  }
+  return "";
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+</script>
+
+</body>
+</html>
